@@ -1,5 +1,9 @@
 package main.server;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -63,8 +67,25 @@ public class Server {
                 }
             }
         }
+        public static void receiveFile(String filename) throws Exception{
+            FileOutputStream fileOutputStream
+                    = new FileOutputStream(filename);
+            int bytes = 0;
+            FileInputStream fileInputStream = new FileInputStream(filename);
+            DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+            long size = dataInputStream.readLong();
+            byte[] buffer = new byte[4 * 1024];
+            while (size > 0
+                    && (bytes = dataInputStream.read(
+                    buffer, 0,
+                    (int)Math.min(buffer.length, size)))
+                    != -1) {
+                // Here we write the file using write method
+                fileOutputStream.write(buffer, 0, bytes);
+                size -= bytes; // read upto file size
+            }
+        }
     }
 
-    public void sendFile(String inputFilePath) {
-    }
+
 }
