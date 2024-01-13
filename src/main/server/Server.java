@@ -1,89 +1,59 @@
 package main.server;
+
+import main.common.ConnectionService;
+import main.common.Message;
+
 import java.io.File;
-
-import java.io.*;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-public class Server {
+
+import java.io.IOException;
+
+public class Server extends Thread{
+    private ArrayList <ConnectionService> clientList;
     private int port;
-    private static ConcurrentHashMap<Integer, ClientHandler> activeConnections = new ConcurrentHashMap<>();
 
-    public Server(int port) {
+    public Server(int port,ArrayList clientList) {
         this.port = port;
-        activeConnections = new ConcurrentHashMap<>();
-    }
+        this.clientList = clientList;
 
-    public static void main(String[] args) {
-        Server server = new Server(8081);
-        server.start();
     }
-
-    public void start() {
-        try (ServerSocket socket = new ServerSocket(port)) {
+    public void sendToall(Message message) throws IOException {
+        for(ConnectionService client : clientList)
+            client.writeMessage(message);
+    }
+    @Override
+    public void run() {
+        try (ServerSocket serverSocket = new ServerSocket(port)){
+            System.out.println("Сервер запущен");
             while (true) {
-                Socket clientSocket = socket.accept();
-                ClientHandler clientHandler = new ClientHandler(clientSocket);
-                activeConnections.put(clientSocket.getPort(), clientHandler);
+                // throws IOException
+                try (ConnectionService service = new ConnectionService(serverSocket.accept())){
+                    clientList.add(service);
+                    Message message = service.readMessage();
+                    File file = new File(message.getText());
+                    if(file.isFile()){
+                        Message message2 = new Message("Файл загружен");
+                        sendToall(message2);sendToall(message2);
 
-                Thread thread = new Thread(clientHandler);
-                thread.start();
+                    }
+                    else {
+
+                    }
+
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
+                    System.out.println("Ошибка подключение клиента");
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
+            // скорее всего порт уже занят
+            System.out.println("Ошибка создания serverSocket.");
         }
     }
 
-    static class ClientHandler implements Runnable {
-        private final Socket clientSocket;
-
-        public ClientHandler(Socket clientSocket) {
-            this.clientSocket = clientSocket;
-        }
-
-        @Override
-        public void run() {
-            try {
-                InputStream inputStream = clientSocket.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                String message = reader.readLine();
-                File file = new File(message);
-                if(file.isFile()){
-
-                }
-                else {
-
-                }
-            }
-            catch (IOException e){
-
-            }
-        }
-
-    }
-
-    public static void receiveFile(String filename) throws Exception {
-        FileOutputStream fileOutputStream
-                = new FileOutputStream(filename);
-        int bytes = 0;
-        FileInputStream fileInputStream = new FileInputStream(filename);
-        DataInputStream dataInputStream = new DataInputStream(fileInputStream);
-        long size = dataInputStream.readLong();
-        byte[] buffer = new byte[4 * 1024];
-        while (size > 0
-                && (bytes = dataInputStream.read(
-                buffer, 0,
-                (int) Math.min(buffer.length, size)))
-                != -1) {
-            // Here we write the file using write method
-            fileOutputStream.write(buffer, 0, bytes);
-            size -= bytes; // read upto file size
-        }
-    }
 }
 
 
