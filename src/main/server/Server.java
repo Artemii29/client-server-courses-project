@@ -9,9 +9,11 @@ import java.util.ArrayList;
 
 
 import java.io.IOException;
+import java.util.List;
 
 public class Server extends Thread{
     private ArrayList <ConnectionService> clientList;
+    private List<String>filenames;
     private int port;
 
     public Server(int port,ArrayList clientList) {
@@ -23,6 +25,7 @@ public class Server extends Thread{
         for(ConnectionService client : clientList)
             client.writeMessage(message);
     }
+
     @Override
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)){
@@ -34,8 +37,9 @@ public class Server extends Thread{
                     Message message = service.readMessage();
                     File file = new File(message.getText());
                     if(file.isFile()){
-                        Message message2 = new Message("Файл загружен");
-                        sendToall(message2);sendToall(message2);
+                        filenames.add(file.getName());
+                        Message message2 = new Message("Файл загружен" + file.getName());
+                        sendToall(message2);
 
                     }
                     else {
